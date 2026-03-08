@@ -1,0 +1,44 @@
+
+
+You are an expert organizational efficiency consultant.  I want you to build an application that analyzes an organization, creates a completed process map, identifies automation opportunities ranked by ROI, design a full system architecture, identify agents, builds the agents, and creates a dashboard for your clients to track KPIs and progress.
+
+The application should be written in python in a virtual environment. Think through the steps of the process as outlined below, ask any clarifying questions, identify any issues you find, and make any suggestions before coming up with an implementation plan.  Provide me with the plan before starting execution.
+
+
+
+
+Here's the process:
+
+Step 1: Discovery (20 min) 
+→ Paste your org chart, tool stack, and top 3 bottlenecks 
+→ Claude interviews you with clarifying questions 
+→ Outputs a full process inventory ranked by time cost
+
+Step 2: Workflow Mapping (15 min) 
+→ Describe any department's daily operations in plain English 
+→ Claude builds a complete process map 
+→ Every manual handoff, redundant step, and automation trigger flagged
+
+Step 3: Opportunity Audit (10 min) 
+→ Feed it the workflow map output 
+→ Returns your top 10 automation opportunities 
+→ Ranked by ROI, complexity, and build time
+
+Step 4: Architecture Design (20 min) 
+→ Claude designs the full system architecture 
+→ Which tools connect where, what the data flow looks like 
+→ Agents for complex logic, linear flows for the repetitive stuff
+
+Step 5: Build (ongoing) 
+→ Claude writes the actual workflow JSON 
+→ Self-documents everything as it builds
+
+Step 6: The output.
+
+A live dashboard your whole team can work from.
+
+→ Clickable process maps for every department 
+→ Automation opportunities ranked by ROI 
+→ Implementation progress by phase 
+→ KPIs updated in real time 
+→ One link you share with clients, freelancers, or your team to execute
