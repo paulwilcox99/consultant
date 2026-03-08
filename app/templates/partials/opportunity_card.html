@@ -1,0 +1,34 @@
+<div class="opportunity-card complexity-{{ opp.complexity }}" data-complexity="{{ opp.complexity }}" data-status="{{ opp.status }}">
+  <div class="opp-header">
+    <span class="opp-rank">#{{ opp.rank }}</span>
+    <div class="opp-badges">
+      <span class="complexity-badge complexity-{{ opp.complexity }}">{{ opp.complexity }}</span>
+      <span class="status-badge status-{{ opp.status }}">{{ opp.status }}</span>
+    </div>
+  </div>
+  <h3 class="opp-title">{{ opp.title }}</h3>
+  <p class="opp-desc">{{ opp.description }}</p>
+  <div class="opp-metrics">
+    <div class="metric">
+      <span class="metric-label">ROI Score</span>
+      <div class="roi-bar-wrap">
+        <div class="roi-bar" style="width: {{ opp.roi_score }}%"></div>
+      </div>
+      <span class="metric-value roi-value">{{ opp.roi_score }}</span>
+    </div>
+    <div class="metrics-row">
+      <div class="metric-item">
+        <span class="metric-label">Hours/yr</span>
+        <span class="metric-value">{{ opp.annual_hours_saved|int }}h</span>
+      </div>
+      <div class="metric-item">
+        <span class="metric-label">Build</span>
+        <span class="metric-value">{{ opp.build_time_days|int }}d</span>
+      </div>
+      <div class="metric-item">
+        <span class="metric-label">Platform</span>
+        <span class="metric-value">{{ opp.platform_recommendation }}</span>
+      </div>
+    </div>
+  </div>
+</div>

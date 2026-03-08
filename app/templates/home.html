@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Setup — Efficiency Consultant{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Organizational Efficiency Consultant</h1>
+  <p class="page-subtitle">Set up your organization to begin the efficiency analysis.</p>
+</div>
+
+<div class="card form-card">
+  <h2>Organization Setup</h2>
+  <form method="POST" action="/setup">
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="name">Organization Name *</label>
+        <input type="text" id="name" name="name" required
+               value="{{ org.name if org else '' }}"
+               placeholder="e.g., Acme Corp">
+      </div>
+
+      <div class="form-group">
+        <label for="industry">Industry *</label>
+        <input type="text" id="industry" name="industry" required
+               value="{{ org.industry if org else '' }}"
+               placeholder="e.g., SaaS, Healthcare, Manufacturing">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="org_chart_text">Org Chart / Team Structure</label>
+      <textarea id="org_chart_text" name="org_chart_text" rows="5"
+                placeholder="Describe your org structure, departments, and team sizes...">{{ org.org_chart_text if org else '' }}</textarea>
+      <span class="field-hint">Include department names, team sizes, reporting structure</span>
+    </div>
+
+    <div class="form-group">
+      <label for="tool_stack">Current Tool Stack</label>
+      <input type="text" id="tool_stack" name="tool_stack"
+             value="{{ ', '.join(org.tool_stack_json) if org and org.tool_stack_json else '' }}"
+             placeholder="Salesforce, Slack, Google Workspace, Jira, Notion...">
+      <span class="field-hint">Comma-separated list of tools and platforms you use</span>
+    </div>
+
+    <div class="form-group">
+      <label for="bottlenecks">Top Bottlenecks (one per line)</label>
+      <textarea id="bottlenecks" name="bottlenecks" rows="4"
+                placeholder="Manual data entry between CRM and billing&#10;Weekly status update meetings take too long&#10;Approval process for purchases is slow">{{ '\n'.join(org.bottlenecks_json) if org and org.bottlenecks_json else '' }}</textarea>
+      <span class="field-hint">List your biggest time-wasters and pain points</span>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary btn-lg">
+        {% if org %}Update & Continue{% else %}Start Analysis{% endif %} →
+      </button>
+    </div>
+  </form>
+</div>
+
+{% if org %}
+<div class="card info-card">
+  <h3>Analysis Progress</h3>
+  <div class="steps-grid">
+    <a href="/discovery" class="step-card">
+      <span class="step-num">1</span>
+      <span class="step-name">Discovery</span>
+      <span class="step-desc">Intake & process inventory</span>
+    </a>
+    <a href="/workflow" class="step-card">
+      <span class="step-num">2</span>
+      <span class="step-name">Workflows</span>
+      <span class="step-desc">Map department processes</span>
+    </a>
+    <a href="/audit" class="step-card">
+      <span class="step-num">3</span>
+      <span class="step-name">Audit</span>
+      <span class="step-desc">Rank automation opportunities</span>
+    </a>
+    <a href="/architecture" class="step-card">
+      <span class="step-num">4</span>
+      <span class="step-name">Architecture</span>
+      <span class="step-desc">System design</span>
+    </a>
+    <a href="/build" class="step-card">
+      <span class="step-num">5</span>
+      <span class="step-name">Build</span>
+      <span class="step-desc">Generate workflow configs</span>
+    </a>
+    <a href="/dashboard" class="step-card">
+      <span class="step-num">6</span>
+      <span class="step-name">Dashboard</span>
+      <span class="step-desc">Live analytics & KPIs</span>
+    </a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

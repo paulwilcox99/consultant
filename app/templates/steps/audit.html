@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Step 3: Opportunity Audit — Efficiency Consultant{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Step 3: Automation Opportunity Audit</h1>
+  <p class="page-subtitle">AI-ranked automation opportunities sorted by ROI potential.</p>
+</div>
+
+<!-- Context summary -->
+<div class="context-bar">
+  <span>📊 {{ workflow_maps|length }} workflow maps analyzed</span>
+  <span>·</span>
+  <span>🔍 Looking for top 10 automation opportunities</span>
+</div>
+
+<!-- Run audit -->
+<div class="card action-card">
+  <div class="action-content">
+    <div>
+      <h3>Run Automation Audit</h3>
+      <p>Claude will analyze all workflow maps and identify the 10 highest-ROI automation opportunities.</p>
+    </div>
+    <div>
+      <button onclick="runAudit()" class="btn btn-primary" id="audit-btn">
+        {% if opportunities %}Re-run Audit{% else %}Run Audit{% endif %}
+      </button>
+    </div>
+  </div>
+
+  <div id="stream-output" class="stream-box" style="display:none">
+    <div class="stream-label">Analyzing workflows...</div>
+    <div id="stream-text" class="stream-text"></div>
+  </div>
+</div>
+
+{% if opportunities %}
+<!-- Opportunities grid -->
+<div class="section-header">
+  <h2>Opportunities <span class="badge badge-primary">{{ opportunities|length }}</span></h2>
+  <span class="muted">Sorted by ROI score</span>
+</div>
+
+<div class="opportunities-grid">
+  {% for opp in opportunities %}
+  <div class="opportunity-card complexity-{{ opp.complexity }}">
+    <div class="opp-header">
+      <span class="opp-rank">#{{ opp.rank }}</span>
+      <div class="opp-badges">
+        <span class="complexity-badge complexity-{{ opp.complexity }}">{{ opp.complexity }}</span>
+        <span class="status-badge status-{{ opp.status }}">{{ opp.status }}</span>
+      </div>
+    </div>
+
+    <h3 class="opp-title">{{ opp.title }}</h3>
+    <p class="opp-desc">{{ opp.description }}</p>
+
+    <div class="opp-metrics">
+      <div class="metric">
+        <span class="metric-label">ROI Score</span>
+        <div class="roi-bar-wrap">
+          <div class="roi-bar" style="width: {{ opp.roi_score }}%"></div>
+        </div>
+        <span class="metric-value roi-value">{{ opp.roi_score }}</span>
+      </div>
+      <div class="metrics-row">
+        <div class="metric-item">
+          <span class="metric-label">Hours Saved/yr</span>
+          <span class="metric-value">{{ opp.annual_hours_saved|int }}h</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-label">Build Time</span>
+          <span class="metric-value">{{ opp.build_time_days|int }}d</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-label">Platform</span>
+          <span class="metric-value">{{ opp.platform_recommendation }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="section-footer">
+  <a href="/architecture" class="btn btn-primary btn-lg">Proceed to Architecture Design →</a>
+</div>
+{% else %}
+<div class="empty-state card">
+  <div class="empty-icon">📊</div>
+  <h3>No opportunities yet</h3>
+  <p>Run the audit above to identify automation opportunities.</p>
+  {% if not workflow_maps %}
+  <p class="muted">You need to create workflow maps first.</p>
+  <a href="/workflow" class="btn btn-secondary">Go to Workflow Mapping</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function runAudit() {
+  const btn = document.getElementById('audit-btn');
+  const streamDiv = document.getElementById('stream-output');
+  const streamText = document.getElementById('stream-text');
+
+  btn.disabled = true;
+  btn.textContent = 'Running...';
+  streamDiv.style.display = 'block';
+  streamText.textContent = '';
+
+  try {
+    const response = await fetch('/audit/run', {method: 'POST'});
+    await readSSEStream(response, streamText, () => {
+      window.location.reload();
+    });
+  } catch(err) {
+    streamText.textContent = 'Error: ' + err.message;
+    btn.disabled = false;
+    btn.textContent = 'Run Audit';
+  }
+}
+</script>
+{% endblock %}

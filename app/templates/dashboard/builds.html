@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Builds — Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Workflow Builds</h1>
+  <a href="/build" class="btn btn-secondary">Build More</a>
+</div>
+
+{% if builds_by_opp %}
+{% for opp_id, opp_builds in builds_by_opp.items() %}
+{% set opp = opportunities | selectattr('id', 'equalto', opp_id) | first | default(none) %}
+<div class="card build-card">
+  <div class="build-header">
+    {% if opp %}
+    <div>
+      <h2>#{{ opp.rank }} {{ opp.title }}</h2>
+      <div class="build-meta">
+        <span class="complexity-badge complexity-{{ opp.complexity }}">{{ opp.complexity }}</span>
+        <span class="muted">{{ opp.annual_hours_saved|int }}h/yr saved</span>
+        <span class="muted">Platform: {{ opp.platform_recommendation }}</span>
+      </div>
+    </div>
+    {% else %}
+    <h2>Opportunity #{{ opp_id }}</h2>
+    {% endif %}
+    <a href="/build?opportunity={{ opp_id }}" class="btn btn-sm btn-ghost">Rebuild</a>
+  </div>
+
+  <div class="platform-tabs">
+    {% set tab_id = "build-" ~ opp_id %}
+    <div class="tab-buttons" id="tabs-{{ tab_id }}">
+      {% for build in opp_builds %}
+      <button class="tab-btn {% if loop.first %}active{% endif %}"
+              onclick="switchTab('{{ tab_id }}', '{{ build.platform }}', this)">
+        {{ build.platform }}
+      </button>
+      {% endfor %}
+    </div>
+
+    {% for build in opp_builds %}
+    <div class="tab-panel {% if loop.first %}active{% endif %}" id="tab-{{ tab_id }}-{{ build.platform }}">
+      <div class="code-header">
+        <span class="code-lang">{{ build.platform }}</span>
+        <span class="muted">Generated {{ build.created_at.strftime('%b %d, %Y') }}</span>
+        <button class="copy-btn" onclick="copyCode('code-{{ opp_id }}-{{ build.platform }}')">Copy</button>
+      </div>
+      <pre id="code-{{ opp_id }}-{{ build.platform }}" class="code-block"><code>{{ build.workflow_json }}</code></pre>
+      {% if build.documentation %}
+      <div class="build-docs">
+        <h4>Documentation</h4>
+        <div class="docs-content">{{ build.documentation }}</div>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="empty-state card">
+  <div class="empty-icon">📦</div>
+  <h3>No builds yet</h3>
+  <p>Go to the Build step to generate workflow configurations.</p>
+  <a href="/build" class="btn btn-primary">Build Workflows</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function switchTab(tabId, platform, btn) {
+  document.querySelectorAll(`[id^="tab-${tabId}-"]`).forEach(p => p.classList.remove('active'));
+  document.querySelectorAll(`#tabs-${tabId} .tab-btn`).forEach(b => b.classList.remove('active'));
+  document.getElementById(`tab-${tabId}-${platform}`).classList.add('active');
+  btn.classList.add('active');
+}
+
+function copyCode(id) {
+  const code = document.getElementById(id).textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    const btn = event.target;
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 2000);
+  });
+}
+</script>
+{% endblock %}

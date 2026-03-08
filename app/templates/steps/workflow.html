@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block title %}Step 2: Workflow Mapping — Efficiency Consultant{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Step 2: Workflow Mapping</h1>
+  <p class="page-subtitle">Map department workflows and identify automation trigger points.</p>
+</div>
+
+<div class="two-col-layout">
+  <!-- Input Panel -->
+  <div class="input-panel">
+    <div class="card">
+      <h2>Map a Workflow</h2>
+      <form id="workflow-form" onsubmit="mapWorkflow(event)">
+        <div class="form-group">
+          <label for="department">Department</label>
+          <select id="department" name="department" required>
+            <option value="">Select department...</option>
+            {% for dept in departments %}
+            <option value="{{ dept }}">{{ dept }}</option>
+            {% endfor %}
+            <option value="__custom__">+ Custom department</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="custom-dept-group" style="display:none">
+          <label for="custom-department">Department Name</label>
+          <input type="text" id="custom-department" placeholder="Enter department name">
+        </div>
+
+        <div class="form-group">
+          <label for="process_id">Process (optional)</label>
+          <select id="process_id" name="process_id">
+            <option value="">Select a process to map...</option>
+            {% for p in processes %}
+            <option value="{{ p.id }}">{{ p.name }} ({{ p.department }})</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="plain_english">Process Description *</label>
+          <textarea id="plain_english" name="plain_english" rows="8" required
+                    placeholder="Describe the workflow step by step in plain English...&#10;&#10;Example: When a new lead comes in via the website form, Sarah in sales manually copies the info into Salesforce, then emails the lead a welcome message, then creates a Jira ticket for onboarding, then notifies the team in Slack..."></textarea>
+          <span class="field-hint">Be specific about who does what, which tools are used, and where delays happen.</span>
+        </div>
+
+        <input type="hidden" id="dept-final" name="department_final" value="">
+
+        <button type="submit" class="btn btn-primary btn-full" id="map-btn">
+          Generate Workflow Map →
+        </button>
+      </form>
+
+      <!-- Stream output -->
+      <div id="stream-output" class="stream-box" style="display:none">
+        <div class="stream-label">Analyzing workflow...</div>
+        <div id="stream-text" class="stream-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Maps Panel -->
+  <div class="maps-panel">
+    {% if workflow_maps %}
+    <div class="card">
+      <div class="card-header">
+        <h2>Generated Workflow Maps</h2>
+        <span class="badge">{{ workflow_maps|length }}</span>
+      </div>
+
+      <div class="maps-list" id="maps-list">
+        {% for wm in workflow_maps %}
+        <div class="workflow-map-item">
+          <div class="map-header">
+            <div>
+              <strong>{{ wm.department }}</strong>
+              <span class="muted"> — {{ wm.created_at.strftime('%b %d, %H:%M') }}</span>
+            </div>
+            <div class="map-badges">
+              {% if wm.flagged_handoffs_json %}
+              <span class="badge badge-warning">{{ wm.flagged_handoffs_json|length }} handoffs</span>
+              {% endif %}
+              {% if wm.flagged_redundancies_json %}
+              <span class="badge badge-danger">{{ wm.flagged_redundancies_json|length }} redundancies</span>
+              {% endif %}
+              {% if wm.automation_triggers_json %}
+              <span class="badge badge-success">{{ wm.automation_triggers_json|length }} triggers</span>
+              {% endif %}
+            </div>
+          </div>
+
+          {% if wm.mermaid_diagram %}
+          <details class="diagram-details">
+            <summary>View Diagram</summary>
+            <div class="mermaid">{{ wm.mermaid_diagram }}</div>
+          </details>
+          {% endif %}
+
+          {% if wm.flagged_handoffs_json or wm.flagged_redundancies_json or wm.automation_triggers_json %}
+          <details class="flags-details">
+            <summary>View Flags</summary>
+            <div class="flags-content">
+              {% if wm.flagged_handoffs_json %}
+              <div class="flag-section">
+                <h4>Manual Handoffs</h4>
+                {% for h in wm.flagged_handoffs_json %}
+                <div class="flag-item flag-handoff">{{ h.description if h is mapping else h }}</div>
+                {% endfor %}
+              </div>
+              {% endif %}
+              {% if wm.flagged_redundancies_json %}
+              <div class="flag-section">
+                <h4>Redundancies</h4>
+                {% for r in wm.flagged_redundancies_json %}
+                <div class="flag-item flag-redundant">{{ r.description if r is mapping else r }}</div>
+                {% endfor %}
+              </div>
+              {% endif %}
+              {% if wm.automation_triggers_json %}
+              <div class="flag-section">
+                <h4>Automation Triggers</h4>
+                {% for t in wm.automation_triggers_json %}
+                <div class="flag-item flag-trigger">{{ t.description if t is mapping else t }}</div>
+                {% endfor %}
+              </div>
+              {% endif %}
+            </div>
+          </details>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="card-footer">
+        <a href="/audit" class="btn btn-primary">Proceed to Opportunity Audit →</a>
+      </div>
+    </div>
+    {% else %}
+    <div class="card empty-state">
+      <div class="empty-icon">🗺️</div>
+      <h3>No workflow maps yet</h3>
+      <p>Describe a workflow on the left to generate your first Mermaid diagram.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('department').addEventListener('change', function() {
+  const custom = document.getElementById('custom-dept-group');
+  custom.style.display = this.value === '__custom__' ? 'block' : 'none';
+});
+
+async function mapWorkflow(e) {
+  e.preventDefault();
+  const btn = document.getElementById('map-btn');
+  const streamDiv = document.getElementById('stream-output');
+  const streamText = document.getElementById('stream-text');
+
+  // Resolve department value
+  const deptSelect = document.getElementById('department');
+  let dept = deptSelect.value;
+  if (dept === '__custom__') {
+    dept = document.getElementById('custom-department').value.trim();
+  }
+  if (!dept) { alert('Please select or enter a department.'); return; }
+
+  const formData = new FormData(document.getElementById('workflow-form'));
+  formData.set('department', dept);
+
+  btn.disabled = true;
+  btn.textContent = 'Generating...';
+  streamDiv.style.display = 'block';
+  streamText.textContent = '';
+
+  try {
+    const response = await fetch('/workflow/map', {method: 'POST', body: formData});
+    await readSSEStream(response, streamText, () => {
+      window.location.reload();
+    });
+  } catch(err) {
+    streamText.textContent = 'Error: ' + err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Generate Workflow Map →';
+  }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Efficiency Consultant{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Dashboard Overview</h1>
+  {% if org %}<p class="page-subtitle">{{ org.name }} — {{ org.industry }}</p>{% endif %}
+</div>
+
+<!-- Stats bar -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-icon">🔍</div>
+    <div class="stat-value">{{ stats.process_count }}</div>
+    <div class="stat-label">Processes Mapped</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon">💡</div>
+    <div class="stat-value">{{ stats.opportunity_count }}</div>
+    <div class="stat-label">Opportunities</div>
+  </div>
+  <div class="stat-card highlight">
+    <div class="stat-icon">⏰</div>
+    <div class="stat-value">{{ stats.total_annual_hours }}</div>
+    <div class="stat-label">Hours/Year to Save</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon">📦</div>
+    <div class="stat-value">{{ stats.completed_builds }}</div>
+    <div class="stat-label">Builds Completed</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon">📈</div>
+    <div class="stat-value">{{ stats.kpi_completion_pct }}%</div>
+    <div class="stat-label">KPI Achievement</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon">🗺️</div>
+    <div class="stat-value">{{ stats.workflow_map_count }}</div>
+    <div class="stat-label">Workflow Maps</div>
+  </div>
+</div>
+
+<div class="dashboard-layout">
+  <!-- Top opportunities -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Top Opportunities</h2>
+      <a href="/dashboard/opportunities" class="btn btn-sm btn-ghost">View All</a>
+    </div>
+    {% if opportunities %}
+    <div class="top-opps-list">
+      {% for opp in opportunities[:5] %}
+      <div class="top-opp-row">
+        <span class="opp-rank-sm">#{{ opp.rank }}</span>
+        <div class="opp-info">
+          <strong>{{ opp.title }}</strong>
+          <span class="muted">{{ opp.platform_recommendation }}</span>
+        </div>
+        <div class="opp-roi-bar-wrap">
+          <div class="roi-bar-sm" style="width: {{ opp.roi_score }}%"></div>
+          <span class="roi-label-sm">{{ opp.roi_score }}</span>
+        </div>
+        <span class="complexity-badge complexity-{{ opp.complexity }}">{{ opp.complexity }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-inline">No opportunities yet. <a href="/audit">Run audit →</a></div>
+    {% endif %}
+  </div>
+
+  <!-- Implementation phases -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Implementation Phases</h2>
+    </div>
+    {% if phases %}
+    <div class="phases-list">
+      {% for phase in phases %}
+      <div class="phase-item">
+        <div class="phase-header">
+          <span class="phase-name">{{ phase.name }}</span>
+          <span class="phase-status status-{{ phase.status }}">{{ phase.status }}</span>
+        </div>
+        <p class="phase-desc muted">{{ phase.description }}</p>
+        <div class="phase-progress-wrap">
+          <div class="phase-progress-bar">
+            <div class="phase-progress-fill" style="width: {{ phase.progress_pct }}%"></div>
+          </div>
+          <span class="phase-pct">{{ phase.progress_pct|int }}%</span>
+        </div>
+        <form hx-post="/dashboard/phases/{{ phase.id }}/progress"
+              hx-target="closest .phase-item"
+              hx-swap="outerHTML"
+              class="phase-form">
+          <input type="range" name="progress_pct" min="0" max="100" step="5"
+                 value="{{ phase.progress_pct|int }}"
+                 oninput="this.nextElementSibling.textContent=this.value+'%'"
+                 class="progress-slider">
+          <span class="slider-preview">{{ phase.progress_pct|int }}%</span>
+          <select name="status" class="status-select">
+            <option value="pending" {% if phase.status == 'pending' %}selected{% endif %}>Pending</option>
+            <option value="in_progress" {% if phase.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+            <option value="completed" {% if phase.status == 'completed' %}selected{% endif %}>Completed</option>
+          </select>
+          <button type="submit" class="btn btn-sm btn-primary">Update</button>
+        </form>
+
+        {% if phase.tasks_json %}
+        <details class="tasks-details">
+          <summary>{{ phase.tasks_json|length }} tasks</summary>
+          <ul class="task-list">
+            {% for task in phase.tasks_json %}
+            <li class="task-item {% if task.completed %}completed{% endif %}">
+              {{ task.title }}
+              {% if task.roi %}<span class="task-roi muted">ROI: {{ task.roi }}</span>{% endif %}
+            </li>
+            {% endfor %}
+          </ul>
+        </details>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-inline">No phases yet. <a href="/audit">Run audit →</a></div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Quick navigation cards -->
+<div class="nav-cards-grid">
+  <a href="/dashboard/process-maps" class="nav-card">
+    <span class="nav-card-icon">🗺️</span>
+    <span class="nav-card-title">Process Maps</span>
+    <span class="nav-card-count">{{ stats.workflow_map_count }}</span>
+  </a>
+  <a href="/dashboard/architecture" class="nav-card">
+    <span class="nav-card-icon">🏗️</span>
+    <span class="nav-card-title">Architecture</span>
+    <span class="nav-card-count">{{ '1' if architecture else '0' }}</span>
+  </a>
+  <a href="/dashboard/builds" class="nav-card">
+    <span class="nav-card-icon">📦</span>
+    <span class="nav-card-title">Builds</span>
+    <span class="nav-card-count">{{ stats.completed_builds }}</span>
+  </a>
+  <a href="/dashboard/kpis" class="nav-card">
+    <span class="nav-card-icon">📈</span>
+    <span class="nav-card-title">KPIs</span>
+    <span class="nav-card-count">{{ kpis|length }}</span>
+  </a>
+</div>
+{% endblock %}

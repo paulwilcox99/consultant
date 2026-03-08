@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block title %}Step 1: Discovery — Efficiency Consultant{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Step 1: Discovery</h1>
+  <p class="page-subtitle">AI-powered intake session to understand your organization's processes.</p>
+</div>
+
+<div class="two-col-layout">
+  <!-- Chat Panel -->
+  <div class="chat-panel card">
+    <div class="chat-header">
+      <h2>Discovery Chat</h2>
+      <div class="chat-actions">
+        {% if messages %}
+        <form method="POST" action="/discovery/clear" style="display:inline">
+          <button type="submit" class="btn btn-sm btn-ghost">Clear Chat</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="chat-messages" id="chat-messages">
+      {% for msg in messages %}
+      <div class="message message-{{ msg.role }}">
+        <div class="message-role">{{ 'You' if msg.role == 'user' else '🤖 Consultant' }}</div>
+        <div class="message-content">{{ msg.content }}</div>
+      </div>
+      {% endfor %}
+      <div id="stream-output" class="message message-assistant" style="display:none">
+        <div class="message-role">🤖 Consultant</div>
+        <div class="message-content" id="stream-text"></div>
+      </div>
+    </div>
+
+    <div class="chat-input-area">
+      {% if not messages %}
+      <!-- Start discovery -->
+      <form id="start-form" onsubmit="startDiscovery(event)">
+        <div class="start-prompt">
+          <p>Ready to begin your efficiency analysis? The AI consultant will ask you 5-7 clarifying questions about your organization.</p>
+          <button type="submit" class="btn btn-primary" id="start-btn">
+            Start Discovery Session
+          </button>
+        </div>
+      </form>
+      {% else %}
+      <!-- Reply form -->
+      <form id="reply-form" onsubmit="sendReply(event)">
+        <div class="input-row">
+          <textarea id="reply-input" name="message" rows="2"
+                    placeholder="Type your answer here..."
+                    onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();document.getElementById('reply-form').dispatchEvent(new Event('submit'));}"></textarea>
+          <button type="submit" class="btn btn-primary" id="reply-btn">Send</button>
+        </div>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Results Panel -->
+  <div class="results-panel">
+    <!-- Finalize button -->
+    {% if messages %}
+    <div class="card action-card">
+      <h3>Finalize Discovery</h3>
+      <p>When you've answered all the questions, extract the process inventory.</p>
+      <form method="POST" action="/discovery/finalize">
+        <button type="submit" class="btn btn-success btn-full">
+          Extract Process Inventory →
+        </button>
+      </form>
+    </div>
+    {% endif %}
+
+    <!-- Process inventory -->
+    {% if processes %}
+    <div class="card">
+      <div class="card-header">
+        <h3>Process Inventory</h3>
+        <span class="badge badge-success">{{ processes|length }} processes</span>
+      </div>
+      <div class="process-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Process</th>
+              <th>Department</th>
+              <th>Hours/Week</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in processes %}
+            <tr>
+              <td><span class="rank-badge">{{ p.rank }}</span></td>
+              <td>
+                <strong>{{ p.name }}</strong>
+                {% if p.description %}
+                <br><small class="muted">{{ p.description[:80] }}{% if p.description|length > 80 %}...{% endif %}</small>
+                {% endif %}
+              </td>
+              <td><span class="dept-badge">{{ p.department }}</span></td>
+              <td class="hours-cell">{{ p.time_cost_hours_per_week }}h</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="card-footer">
+        <a href="/workflow" class="btn btn-primary">Proceed to Workflow Mapping →</a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function startDiscovery(e) {
+  e.preventDefault();
+  const btn = document.getElementById('start-btn');
+  btn.disabled = true;
+  btn.textContent = 'Starting...';
+
+  const streamDiv = document.getElementById('stream-output');
+  const streamText = document.getElementById('stream-text');
+  streamDiv.style.display = 'block';
+  streamText.textContent = '';
+
+  try {
+    const response = await fetch('/discovery/start', {method: 'POST'});
+    await readSSEStream(response, streamText, () => {
+      window.location.reload();
+    });
+  } catch(err) {
+    streamText.textContent = 'Error: ' + err.message;
+    btn.disabled = false;
+    btn.textContent = 'Start Discovery Session';
+  }
+}
+
+async function sendReply(e) {
+  e.preventDefault();
+  const input = document.getElementById('reply-input');
+  const btn = document.getElementById('reply-btn');
+  const msg = input.value.trim();
+  if (!msg) return;
+
+  btn.disabled = true;
+  input.disabled = true;
+
+  // Add user message to chat
+  const chatMessages = document.getElementById('chat-messages');
+  const userDiv = document.createElement('div');
+  userDiv.className = 'message message-user';
+  userDiv.innerHTML = '<div class="message-role">You</div><div class="message-content">' + escapeHtml(msg) + '</div>';
+  chatMessages.insertBefore(userDiv, document.getElementById('stream-output'));
+
+  const streamDiv = document.getElementById('stream-output');
+  const streamText = document.getElementById('stream-text');
+  streamDiv.style.display = 'block';
+  streamText.textContent = '';
+
+  const formData = new FormData();
+  formData.append('message', msg);
+  input.value = '';
+
+  try {
+    const response = await fetch('/discovery/reply', {method: 'POST', body: formData});
+    await readSSEStream(response, streamText, () => {
+      window.location.reload();
+    });
+  } catch(err) {
+    streamText.textContent = 'Error: ' + err.message;
+  } finally {
+    btn.disabled = false;
+    input.disabled = false;
+    input.focus();
+  }
+}
+
+function escapeHtml(text) {
+  const d = document.createElement('div');
+  d.appendChild(document.createTextNode(text));
+  return d.innerHTML;
+}
+</script>
+{% endblock %}

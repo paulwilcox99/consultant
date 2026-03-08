@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}Step 5: Build — Efficiency Consultant{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Step 5: Build Workflows</h1>
+  <p class="page-subtitle">Generate platform-specific workflow configurations for each automation.</p>
+</div>
+
+<div class="two-col-layout">
+  <!-- Generator Panel -->
+  <div class="input-panel">
+    <div class="card">
+      <h2>Generate Workflow Config</h2>
+      <form id="build-form" onsubmit="generateBuild(event)">
+        <div class="form-group">
+          <label for="opportunity_id">Select Opportunity *</label>
+          <select id="opportunity_id" name="opportunity_id" required>
+            <option value="">Choose automation to build...</option>
+            {% for opp in opportunities %}
+            <option value="{{ opp.id }}" {% if opp.id in built_opportunity_ids %}data-built="true"{% endif %}>
+              #{{ opp.rank }} {{ opp.title }}
+              {% if opp.id in built_opportunity_ids %}✓{% endif %}
+              ({{ opp.platform_recommendation }})
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full" id="build-btn">
+          Generate All 4 Platform Configs →
+        </button>
+      </form>
+
+      <div id="stream-output" class="stream-box" style="display:none">
+        <div class="stream-label">Generating workflow configs...</div>
+        <div id="stream-text" class="stream-text"></div>
+      </div>
+    </div>
+
+    <!-- Quick stats -->
+    <div class="card stats-card">
+      <h3>Build Progress</h3>
+      <div class="stats-row">
+        <div class="stat-item">
+          <span class="stat-value">{{ built_opportunity_ids|length }}</span>
+          <span class="stat-label">Built</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">{{ opportunities|length - built_opportunity_ids|length }}</span>
+          <span class="stat-label">Remaining</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">{{ opportunities|length }}</span>
+          <span class="stat-label">Total</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results Panel -->
+  <div class="results-panel" id="build-results">
+    {% if built_opportunity_ids %}
+    {% for opp in opportunities if opp.id in built_opportunity_ids %}
+    <div class="card build-result-card">
+      <div class="build-header">
+        <h3>#{{ opp.rank }} {{ opp.title }}</h3>
+        <span class="badge badge-success">Built</span>
+      </div>
+
+      <div class="platform-tabs">
+        <div class="tab-buttons" id="tabs-{{ opp.id }}">
+          {% set platforms = ['n8n', 'zapier', 'make', 'python'] %}
+          {% for platform in platforms %}
+          <button class="tab-btn {% if loop.first %}active{% endif %}"
+                  onclick="switchTab('{{ opp.id }}', '{{ platform }}')">
+            {{ platform }}
+          </button>
+          {% endfor %}
+        </div>
+
+        {% for platform in ['n8n', 'zapier', 'make', 'python'] %}
+        {% set build = builds | selectattr('opportunity_id', 'equalto', opp.id) | selectattr('platform', 'equalto', platform) | first | default(none) %}
+        <div class="tab-panel {% if loop.first %}active{% endif %}" id="tab-{{ opp.id }}-{{ platform }}">
+          {% if build and build.workflow_json %}
+          <div class="code-header">
+            <span class="code-lang">{{ platform }}</span>
+            <button class="copy-btn" onclick="copyCode('code-{{ opp.id }}-{{ platform }}')">Copy</button>
+          </div>
+          <pre id="code-{{ opp.id }}-{{ platform }}" class="code-block"><code>{{ build.workflow_json }}</code></pre>
+          {% else %}
+          <div class="empty-platform">No config generated for {{ platform }}</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty-state card">
+      <div class="empty-icon">🔧</div>
+      <h3>No builds yet</h3>
+      <p>Select an opportunity and generate configs for all 4 platforms.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="section-footer">
+  <a href="/dashboard" class="btn btn-primary btn-lg">View Dashboard →</a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function generateBuild(e) {
+  e.preventDefault();
+  const btn = document.getElementById('build-btn');
+  const streamDiv = document.getElementById('stream-output');
+  const streamText = document.getElementById('stream-text');
+
+  btn.disabled = true;
+  btn.textContent = 'Generating...';
+  streamDiv.style.display = 'block';
+  streamText.textContent = '';
+
+  const formData = new FormData(document.getElementById('build-form'));
+
+  try {
+    const response = await fetch('/build/generate', {method: 'POST', body: formData});
+    await readSSEStream(response, streamText, () => {
+      window.location.reload();
+    });
+  } catch(err) {
+    streamText.textContent = 'Error: ' + err.message;
+    btn.disabled = false;
+    btn.textContent = 'Generate All 4 Platform Configs →';
+  }
+}
+
+function switchTab(oppId, platform) {
+  // Hide all panels for this opportunity
+  document.querySelectorAll(`[id^="tab-${oppId}-"]`).forEach(p => p.classList.remove('active'));
+  document.querySelectorAll(`#tabs-${oppId} .tab-btn`).forEach(b => b.classList.remove('active'));
+
+  document.getElementById(`tab-${oppId}-${platform}`).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function copyCode(id) {
+  const code = document.getElementById(id).textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    const btn = event.target;
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 2000);
+  });
+}
+</script>
+{% endblock %}

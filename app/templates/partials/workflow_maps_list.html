@@ -1,0 +1,11 @@
+{% for wm in workflow_maps %}
+<div class="workflow-map-item">
+  <div class="map-header">
+    <strong>{{ wm.department }}</strong>
+    <span class="muted">{{ wm.created_at.strftime('%b %d, %H:%M') }}</span>
+  </div>
+  {% if wm.mermaid_diagram %}
+  <div class="mermaid">{{ wm.mermaid_diagram }}</div>
+  {% endif %}
+</div>
+{% endfor %}

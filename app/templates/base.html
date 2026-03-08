@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Efficiency Consultant{% endblock %}</title>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">⚡</div>
+        <span class="sidebar-title">Consultant</span>
+      </div>
+
+      {% if org %}
+      <div class="org-badge">
+        <span class="org-name">{{ org.name }}</span>
+        <span class="org-industry">{{ org.industry }}</span>
+      </div>
+      {% endif %}
+
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <span class="nav-label">Setup</span>
+          <a href="/" class="nav-link {% if request.url.path == '/' %}active{% endif %}">
+            <span class="nav-icon">🏠</span> Home
+          </a>
+        </div>
+
+        <div class="nav-section">
+          <span class="nav-label">Analysis Steps</span>
+          <a href="/discovery" class="nav-link {% if '/discovery' in request.url.path %}active{% endif %}">
+            <span class="nav-icon">🔍</span> 1. Discovery
+          </a>
+          <a href="/workflow" class="nav-link {% if '/workflow' in request.url.path %}active{% endif %}">
+            <span class="nav-icon">🗺️</span> 2. Workflows
+          </a>
+          <a href="/audit" class="nav-link {% if '/audit' in request.url.path %}active{% endif %}">
+            <span class="nav-icon">📊</span> 3. Audit
+          </a>
+          <a href="/architecture" class="nav-link {% if '/architecture' in request.url.path %}active{% endif %}">
+            <span class="nav-icon">🏗️</span> 4. Architecture
+          </a>
+          <a href="/build" class="nav-link {% if '/build' in request.url.path %}active{% endif %}">
+            <span class="nav-icon">🔧</span> 5. Build
+          </a>
+        </div>
+
+        <div class="nav-section">
+          <span class="nav-label">Dashboard</span>
+          <a href="/dashboard" class="nav-link {% if request.url.path == '/dashboard' %}active{% endif %}">
+            <span class="nav-icon">📋</span> Overview
+          </a>
+          <a href="/dashboard/process-maps" class="nav-link {% if '/dashboard/process-maps' in request.url.path %}active{% endif %}">
+            <span class="nav-icon">🗺️</span> Process Maps
+          </a>
+          <a href="/dashboard/opportunities" class="nav-link {% if '/dashboard/opportunities' in request.url.path %}active{% endif %}">
+            <span class="nav-icon">💡</span> Opportunities
+          </a>
+          <a href="/dashboard/architecture" class="nav-link {% if '/dashboard/architecture' in request.url.path %}active{% endif %}">
+            <span class="nav-icon">🏗️</span> Architecture
+          </a>
+          <a href="/dashboard/builds" class="nav-link {% if '/dashboard/builds' in request.url.path %}active{% endif %}">
+            <span class="nav-icon">📦</span> Builds
+          </a>
+          <a href="/dashboard/kpis" class="nav-link {% if '/dashboard/kpis' in request.url.path %}active{% endif %}">
+            <span class="nav-icon">📈</span> KPIs
+          </a>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="page-container">
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

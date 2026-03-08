@@ -1,0 +1,36 @@
+{% if opportunity %}
+<div class="card build-result-card">
+  <div class="build-header">
+    <h3>{{ opportunity.title }}</h3>
+    <span class="badge badge-success">Generated</span>
+  </div>
+
+  <div class="platform-tabs">
+    <div class="tab-buttons" id="tabs-result">
+      {% for platform in ['n8n', 'zapier', 'make', 'python'] %}
+      {% if builds.get(platform) %}
+      <button class="tab-btn {% if loop.first %}active{% endif %}"
+              onclick="switchTab('result', '{{ platform }}', this)">
+        {{ platform }}
+      </button>
+      {% endif %}
+      {% endfor %}
+    </div>
+
+    {% set first = true %}
+    {% for platform in ['n8n', 'zapier', 'make', 'python'] %}
+    {% set build = builds.get(platform) %}
+    {% if build %}
+    <div class="tab-panel {% if first %}active{% endif %}" id="tab-result-{{ platform }}">
+      <div class="code-header">
+        <span class="code-lang">{{ platform }}</span>
+        <button class="copy-btn" onclick="copyCode('result-code-{{ platform }}')">Copy</button>
+      </div>
+      <pre id="result-code-{{ platform }}" class="code-block"><code>{{ build.workflow_json }}</code></pre>
+    </div>
+    {% set first = false %}
+    {% endif %}
+    {% endfor %}
+  </div>
+</div>
+{% endif %}

@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Opportunities — Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Automation Opportunities</h1>
+  <a href="/audit" class="btn btn-secondary">Re-run Audit</a>
+</div>
+
+{% if opportunities %}
+<div class="filter-bar">
+  <div class="filter-group">
+    <span class="filter-label">Complexity:</span>
+    <button class="filter-btn active" onclick="filterBy('complexity', 'all', this)">All</button>
+    <button class="filter-btn" onclick="filterBy('complexity', 'low', this)">Low</button>
+    <button class="filter-btn" onclick="filterBy('complexity', 'medium', this)">Medium</button>
+    <button class="filter-btn" onclick="filterBy('complexity', 'high', this)">High</button>
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">Status:</span>
+    <button class="filter-btn active" onclick="filterBy('status', 'all', this)">All</button>
+    <button class="filter-btn" onclick="filterBy('status', 'pending', this)">Pending</button>
+    <button class="filter-btn" onclick="filterBy('status', 'in_progress', this)">In Progress</button>
+    <button class="filter-btn" onclick="filterBy('status', 'completed', this)">Completed</button>
+  </div>
+</div>
+
+<div class="opportunities-grid" id="opps-grid">
+  {% for opp in opportunities %}
+  <div class="opportunity-card" data-complexity="{{ opp.complexity }}" data-status="{{ opp.status }}">
+    <div class="opp-header">
+      <span class="opp-rank">#{{ opp.rank }}</span>
+      <div class="opp-badges">
+        <span class="complexity-badge complexity-{{ opp.complexity }}">{{ opp.complexity }}</span>
+        <span class="status-badge status-{{ opp.status }}">{{ opp.status }}</span>
+      </div>
+    </div>
+
+    <h3 class="opp-title">{{ opp.title }}</h3>
+    <p class="opp-desc">{{ opp.description }}</p>
+
+    <div class="opp-metrics">
+      <div class="metric">
+        <span class="metric-label">ROI Score</span>
+        <div class="roi-bar-wrap">
+          <div class="roi-bar" style="width: {{ opp.roi_score }}%"></div>
+        </div>
+        <span class="metric-value roi-value">{{ opp.roi_score }}</span>
+      </div>
+      <div class="metrics-row">
+        <div class="metric-item">
+          <span class="metric-label">Hours Saved/yr</span>
+          <span class="metric-value">{{ opp.annual_hours_saved|int }}h</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-label">Build Time</span>
+          <span class="metric-value">{{ opp.build_time_days|int }}d</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-label">Platform</span>
+          <span class="metric-value platform-tag">{{ opp.platform_recommendation }}</span>
+        </div>
+      </div>
+    </div>
+
+    {% if opp.builds %}
+    <div class="opp-builds">
+      <span class="badge badge-success">Built: {{ opp.builds|length }} platforms</span>
+      <a href="/dashboard/builds" class="btn btn-sm btn-ghost">View →</a>
+    </div>
+    {% else %}
+    <div class="opp-builds">
+      <a href="/build" class="btn btn-sm btn-primary">Build This →</a>
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+<div class="summary-bar">
+  <strong>Total Annual Hours to Save:</strong>
+  {{ opportunities | sum(attribute='annual_hours_saved') | int }}h
+  &nbsp;·&nbsp;
+  <strong>Average ROI Score:</strong>
+  {{ (opportunities | sum(attribute='roi_score') / opportunities|length) | round(1) }}
+</div>
+{% else %}
+<div class="empty-state card">
+  <div class="empty-icon">💡</div>
+  <h3>No opportunities yet</h3>
+  <a href="/audit" class="btn btn-primary">Run Audit</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+let activeFilters = {complexity: 'all', status: 'all'};
+
+function filterBy(type, value, btn) {
+  document.querySelectorAll(`.filter-group button`).forEach(b => {
+    if (b.onclick.toString().includes(`'${type}'`)) b.classList.remove('active');
+  });
+  btn.classList.add('active');
+  activeFilters[type] = value;
+
+  document.querySelectorAll('.opportunity-card').forEach(card => {
+    const matchC = activeFilters.complexity === 'all' || card.dataset.complexity === activeFilters.complexity;
+    const matchS = activeFilters.status === 'all' || card.dataset.status === activeFilters.status;
+    card.style.display = matchC && matchS ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

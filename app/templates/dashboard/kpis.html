@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block title %}KPIs — Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>KPI Tracker</h1>
+</div>
+
+<!-- Add KPI form -->
+<div class="card form-card">
+  <h2>Add KPI</h2>
+  <form method="POST" action="/kpis">
+    <div class="form-grid form-grid-6">
+      <div class="form-group">
+        <label>Name *</label>
+        <input type="text" name="name" required placeholder="e.g., Lead Response Time">
+      </div>
+      <div class="form-group">
+        <label>Current Value</label>
+        <input type="number" name="value" step="0.01" value="0">
+      </div>
+      <div class="form-group">
+        <label>Target</label>
+        <input type="number" name="target" step="0.01" value="0">
+      </div>
+      <div class="form-group">
+        <label>Unit</label>
+        <input type="text" name="unit" placeholder="hours, %, $">
+      </div>
+      <div class="form-group">
+        <label>Department</label>
+        <input type="text" name="department" placeholder="Sales, Ops...">
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <input type="text" name="category" placeholder="Efficiency, Cost...">
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary">Add KPI</button>
+  </form>
+</div>
+
+<!-- KPI grid -->
+{% if kpis %}
+<div class="kpis-grid" id="kpis-grid">
+  {% for kpi in kpis %}
+  {% set pct = ((kpi.value / kpi.target * 100) if kpi.target > 0 else 0) | round(1) %}
+  <div class="kpi-card" id="kpi-card-{{ kpi.id }}">
+    <div class="kpi-header">
+      <div>
+        <h3 class="kpi-name">{{ kpi.name }}</h3>
+        <div class="kpi-meta">
+          {% if kpi.department %}<span class="dept-badge">{{ kpi.department }}</span>{% endif %}
+          {% if kpi.category %}<span class="cat-badge">{{ kpi.category }}</span>{% endif %}
+        </div>
+      </div>
+      <button class="delete-btn"
+              hx-delete="/kpis/{{ kpi.id }}"
+              hx-target="#kpi-card-{{ kpi.id }}"
+              hx-swap="outerHTML"
+              hx-confirm="Delete this KPI?"
+              title="Delete KPI">✕</button>
+    </div>
+
+    <div class="kpi-value-display">
+      <span class="kpi-current">{{ kpi.value }}</span>
+      <span class="kpi-sep">/</span>
+      <span class="kpi-target">{{ kpi.target }}</span>
+      {% if kpi.unit %}<span class="kpi-unit">{{ kpi.unit }}</span>{% endif %}
+    </div>
+
+    {% if kpi.target > 0 %}
+    <div class="kpi-progress">
+      <div class="kpi-progress-bar">
+        <div class="kpi-progress-fill {% if pct >= 100 %}complete{% elif pct >= 75 %}good{% elif pct >= 50 %}medium{% else %}low{% endif %}"
+             style="width: {{ [pct, 100] | min }}%"></div>
+      </div>
+      <span class="kpi-pct">{{ pct }}%</span>
+    </div>
+    {% endif %}
+
+    <!-- Chart canvas -->
+    {% if kpi.history and kpi.history|length > 1 %}
+    <canvas id="kpi-chart-{{ kpi.id }}" class="kpi-sparkline" height="60"></canvas>
+    {% endif %}
+
+    <!-- Update form -->
+    <form hx-patch="/kpis/{{ kpi.id }}"
+          hx-target="#kpi-card-{{ kpi.id }}"
+          hx-swap="outerHTML"
+          class="kpi-update-form"
+          onsubmit="return validateKPI(this)">
+      <div class="kpi-update-row">
+        <input type="number" name="value" step="0.01"
+               value="{{ kpi.value }}"
+               placeholder="New value"
+               class="kpi-input">
+        <button type="submit" class="btn btn-sm btn-primary">Update</button>
+      </div>
+    </form>
+
+    {% if kpi.updated_at %}
+    <div class="kpi-updated muted">Updated: {{ kpi.updated_at.strftime('%b %d, %H:%M') }}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state card">
+  <div class="empty-icon">📈</div>
+  <h3>No KPIs yet</h3>
+  <p>Add your first KPI above to start tracking progress.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function validateKPI(form) {
+  const val = form.querySelector('input[name="value"]').value;
+  if (val === '' || isNaN(val)) { alert('Please enter a valid number'); return false; }
+  return true;
+}
+
+// Initialize sparkline charts
+document.addEventListener('DOMContentLoaded', () => {
+  {% for kpi in kpis %}
+  {% if kpi.history and kpi.history|length > 1 %}
+  (function() {
+    const ctx = document.getElementById('kpi-chart-{{ kpi.id }}');
+    if (!ctx) return;
+    const labels = [{% for h in kpi.history %}'{{ h.recorded_at.strftime("%m/%d") }}'{% if not loop.last %},{% endif %}{% endfor %}];
+    const data = [{% for h in kpi.history %}{{ h.value }}{% if not loop.last %},{% endif %}{% endfor %}];
+    const target = {{ kpi.target }};
+
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: '{{ kpi.name }}',
+            data: data,
+            borderColor: '#6366f1',
+            backgroundColor: 'rgba(99,102,241,0.1)',
+            borderWidth: 2,
+            pointRadius: 3,
+            fill: true,
+            tension: 0.3,
+          },
+          {% if kpi.target > 0 %}
+          {
+            label: 'Target',
+            data: Array(labels.length).fill(target),
+            borderColor: '#10b981',
+            borderWidth: 1,
+            borderDash: [4, 4],
+            pointRadius: 0,
+            fill: false,
+          }
+          {% endif %}
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { display: false },
+          y: { display: false }
+        }
+      }
+    });
+  })();
+  {% endif %}
+  {% endfor %}
+});
+</script>
+{% endblock %}

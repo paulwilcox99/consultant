@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Process Maps — Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Process Maps</h1>
+  <a href="/workflow" class="btn btn-secondary">Add Workflow Map</a>
+</div>
+
+{% if departments %}
+<div class="dept-filter">
+  <span class="filter-label">Filter by department:</span>
+  <button class="filter-btn active" onclick="filterDept('all', this)">All</button>
+  {% for dept in departments %}
+  <button class="filter-btn" onclick="filterDept('{{ dept }}', this)">{{ dept }}</button>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if workflow_maps %}
+<div class="maps-grid" id="maps-grid">
+  {% for wm in workflow_maps %}
+  <div class="card map-card" data-dept="{{ wm.department }}">
+    <div class="map-card-header">
+      <div>
+        <h3>{{ wm.department }}</h3>
+        <span class="muted">{{ wm.created_at.strftime('%b %d, %Y %H:%M') }}</span>
+      </div>
+      <div class="map-badges">
+        {% if wm.flagged_handoffs_json %}
+        <span class="badge badge-warning">{{ wm.flagged_handoffs_json|length }} handoffs</span>
+        {% endif %}
+        {% if wm.flagged_redundancies_json %}
+        <span class="badge badge-danger">{{ wm.flagged_redundancies_json|length }} redundant</span>
+        {% endif %}
+        {% if wm.automation_triggers_json %}
+        <span class="badge badge-success">{{ wm.automation_triggers_json|length }} triggers</span>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if wm.plain_english_input %}
+    <p class="map-description muted">{{ wm.plain_english_input[:150] }}{% if wm.plain_english_input|length > 150 %}...{% endif %}</p>
+    {% endif %}
+
+    {% if wm.mermaid_diagram %}
+    <div class="mermaid diagram-container">{{ wm.mermaid_diagram }}</div>
+    {% endif %}
+
+    {% if wm.flagged_handoffs_json or wm.flagged_redundancies_json or wm.automation_triggers_json %}
+    <div class="flags-summary">
+      {% if wm.flagged_handoffs_json %}
+      <div class="flag-group">
+        <h4 class="flag-group-title handoff-title">Manual Handoffs</h4>
+        {% for h in wm.flagged_handoffs_json %}
+        <div class="flag-tag flag-handoff">
+          {{ h.description if h is mapping else h }}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if wm.flagged_redundancies_json %}
+      <div class="flag-group">
+        <h4 class="flag-group-title redundant-title">Redundancies</h4>
+        {% for r in wm.flagged_redundancies_json %}
+        <div class="flag-tag flag-redundant">{{ r.description if r is mapping else r }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if wm.automation_triggers_json %}
+      <div class="flag-group">
+        <h4 class="flag-group-title trigger-title">Automation Triggers</h4>
+        {% for t in wm.automation_triggers_json %}
+        <div class="flag-tag flag-trigger">{{ t.description if t is mapping else t }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state card">
+  <div class="empty-icon">🗺️</div>
+  <h3>No workflow maps yet</h3>
+  <p>Go to the Workflow step to map your first process.</p>
+  <a href="/workflow" class="btn btn-primary">Map a Workflow</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filterDept(dept, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  document.querySelectorAll('.map-card').forEach(card => {
+    if (dept === 'all' || card.dataset.dept === dept) {
+      card.style.display = '';
+    } else {
+      card.style.display = 'none';
+    }
+  });
+}
+</script>
+{% endblock %}

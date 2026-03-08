@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Step 4: Architecture — Efficiency Consultant{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Step 4: System Architecture Design</h1>
+  <p class="page-subtitle">Visual architecture showing how all automations connect.</p>
+</div>
+
+<div class="context-bar">
+  <span>💡 {{ opportunities|length }} opportunities ready for architecture</span>
+  {% if org and org.tool_stack_json %}
+  <span>·</span>
+  <span>🔧 {{ org.tool_stack_json|join(', ') }}</span>
+  {% endif %}
+</div>
+
+<div class="card action-card">
+  <div class="action-content">
+    <div>
+      <h3>Design System Architecture</h3>
+      <p>Claude will design a comprehensive architecture diagram showing tool connections, agents, and linear flows.</p>
+    </div>
+    <button onclick="designArchitecture()" class="btn btn-primary" id="arch-btn">
+      {% if architecture %}Redesign Architecture{% else %}Design Architecture{% endif %}
+    </button>
+  </div>
+
+  <div id="stream-output" class="stream-box" style="display:none">
+    <div class="stream-label">Designing architecture...</div>
+    <div id="stream-text" class="stream-text"></div>
+  </div>
+</div>
+
+{% if architecture %}
+<div class="two-col-layout arch-layout">
+  <!-- Diagram -->
+  <div class="card arch-diagram-card">
+    <h2>Architecture Diagram</h2>
+    {% if architecture.description %}
+    <p class="arch-description">{{ architecture.description }}</p>
+    {% endif %}
+    {% if architecture.mermaid_diagram %}
+    <div class="mermaid diagram-container">{{ architecture.mermaid_diagram }}</div>
+    {% endif %}
+  </div>
+
+  <!-- Tables -->
+  <div class="arch-tables">
+    {% if architecture.agents_json %}
+    <div class="card">
+      <h3>Automation Agents</h3>
+      <div class="agents-list">
+        {% for agent in architecture.agents_json %}
+        <div class="agent-card">
+          <div class="agent-header">
+            <strong>{{ agent.name }}</strong>
+            <span class="badge">{{ agent.recommended_framework }}</span>
+          </div>
+          <p class="agent-purpose">{{ agent.purpose }}</p>
+          <div class="agent-io">
+            <div>
+              <span class="io-label">Inputs:</span>
+              {% for inp in agent.inputs %}
+              <span class="io-badge">{{ inp }}</span>
+              {% endfor %}
+            </div>
+            <div>
+              <span class="io-label">Outputs:</span>
+              {% for out in agent.outputs %}
+              <span class="io-badge">{{ out }}</span>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if architecture.linear_flows_json %}
+    <div class="card">
+      <h3>Linear Flows</h3>
+      <div class="flows-list">
+        {% for flow in architecture.linear_flows_json %}
+        <div class="flow-item">
+          <div class="flow-header">
+            <strong>{{ flow.name }}</strong>
+            <span class="platform-badge">{{ flow.platform }}</span>
+          </div>
+          <div class="flow-trigger">Trigger: {{ flow.trigger }}</div>
+          <ol class="flow-actions">
+            {% for action in flow.actions %}
+            <li>{{ action }}</li>
+            {% endfor %}
+          </ol>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="section-footer">
+  <a href="/build" class="btn btn-primary btn-lg">Proceed to Build Workflows →</a>
+</div>
+{% else %}
+<div class="empty-state card">
+  <div class="empty-icon">🏗️</div>
+  <h3>No architecture yet</h3>
+  <p>Click "Design Architecture" to generate the system architecture.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function designArchitecture() {
+  const btn = document.getElementById('arch-btn');
+  const streamDiv = document.getElementById('stream-output');
+  const streamText = document.getElementById('stream-text');
+
+  btn.disabled = true;
+  btn.textContent = 'Designing...';
+  streamDiv.style.display = 'block';
+  streamText.textContent = '';
+
+  try {
+    const response = await fetch('/architecture/design', {method: 'POST'});
+    await readSSEStream(response, streamText, () => {
+      window.location.reload();
+    });
+  } catch(err) {
+    streamText.textContent = 'Error: ' + err.message;
+    btn.disabled = false;
+    btn.textContent = 'Design Architecture';
+  }
+}
+</script>
+{% endblock %}

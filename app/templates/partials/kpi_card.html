@@ -1,0 +1,53 @@
+{% set pct = ((kpi.value / kpi.target * 100) if kpi.target > 0 else 0) | round(1) %}
+<div class="kpi-card" id="kpi-card-{{ kpi.id }}">
+  <div class="kpi-header">
+    <div>
+      <h3 class="kpi-name">{{ kpi.name }}</h3>
+      <div class="kpi-meta">
+        {% if kpi.department %}<span class="dept-badge">{{ kpi.department }}</span>{% endif %}
+        {% if kpi.category %}<span class="cat-badge">{{ kpi.category }}</span>{% endif %}
+      </div>
+    </div>
+    <button class="delete-btn"
+            hx-delete="/kpis/{{ kpi.id }}"
+            hx-target="#kpi-card-{{ kpi.id }}"
+            hx-swap="outerHTML"
+            hx-confirm="Delete this KPI?"
+            title="Delete KPI">✕</button>
+  </div>
+
+  <div class="kpi-value-display">
+    <span class="kpi-current">{{ kpi.value }}</span>
+    <span class="kpi-sep">/</span>
+    <span class="kpi-target">{{ kpi.target }}</span>
+    {% if kpi.unit %}<span class="kpi-unit">{{ kpi.unit }}</span>{% endif %}
+  </div>
+
+  {% if kpi.target > 0 %}
+  <div class="kpi-progress">
+    <div class="kpi-progress-bar">
+      <div class="kpi-progress-fill {% if pct >= 100 %}complete{% elif pct >= 75 %}good{% elif pct >= 50 %}medium{% else %}low{% endif %}"
+           style="width: {{ [pct, 100] | min }}%"></div>
+    </div>
+    <span class="kpi-pct">{{ pct }}%</span>
+  </div>
+  {% endif %}
+
+  {% if history and history|length > 1 %}
+  <canvas id="kpi-chart-{{ kpi.id }}" class="kpi-sparkline" height="60"></canvas>
+  {% endif %}
+
+  <form hx-patch="/kpis/{{ kpi.id }}"
+        hx-target="#kpi-card-{{ kpi.id }}"
+        hx-swap="outerHTML"
+        class="kpi-update-form">
+    <div class="kpi-update-row">
+      <input type="number" name="value" step="0.01" value="{{ kpi.value }}" class="kpi-input">
+      <button type="submit" class="btn btn-sm btn-primary">Update</button>
+    </div>
+  </form>
+
+  {% if kpi.updated_at %}
+  <div class="kpi-updated muted">Updated: {{ kpi.updated_at.strftime('%b %d, %H:%M') }}</div>
+  {% endif %}
+</div>
